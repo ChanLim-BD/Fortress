@@ -1,0 +1,137 @@
+<!-- game.html -->
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Game</title>
+    <style>
+        body {
+            margin: 0 auto;
+            width: 50%;
+        }
+        
+        .slidecontainer {
+            width: 100%;
+            margin-top: 100px;
+        }
+
+        .slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 15px;
+            border-radius: 5px;  
+            background: #d3d3d3;
+            outline: none;
+            opacity: 0.7;
+            -webkit-transition: .2s;
+            transition: opacity .2s;
+          }
+
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%; 
+            background: #04AA6D;
+            cursor: pointer;
+          }
+      </style>
+  </head>
+  <body>
+    <canvas id="game-canvas" width="1000" height="700"></canvas>
+    <form method="post">
+      {% csrf_token %}
+      <div class="slidecontainer">
+        <label for="angle">Angle:</label>
+        <input type="range" id="angle" name="angle" min="0" max="90" class="slider" required />
+        <p>Angle: <span id="value1"></span></p>
+      </div>
+      <div class="slidecontainer">
+        <label for="power">Power:</label>
+        <input type="range" id="power" name="power" min="0" max="100" step="1" class="slider" required />
+        <p>Power: <span id="value2"></span></p>
+        <button type="submit">Fire!</button>
+      </div>
+    </form>
+    <div>
+        {% if projectile_positions %}
+            <ul>
+                {% for position in projectile_positions %}
+                    <li>발사체의 좌표: {{ position.0 }}, {{ position.1 }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+    <div>
+        {% if target_positions %}
+            <ul>
+                {% for position in target_positions %}
+                    <li>목표물의 좌표: {{ position.0 }}, {{ position.1 }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+    </div>
+
+    {% if game_over_message %}
+    <div>
+        <p>{{ game_over_message }}</p>
+        <p>게임을 다시 시작하려면 <a href="{% url 'game' %}">여기</a>를 누르세요.</p>
+    </div>
+    {% endif %}
+
+    <script>
+        const gameCanvas = document.getElementById('game-canvas');
+        var slider1 = document.getElementById("angle");
+        var output1 = document.getElementById("value1");
+        var slider2 = document.getElementById("power");
+        var output2 = document.getElementById("value2");
+        var ctx = gameCanvas.getContext('2d');
+
+        ctx.beginPath();
+        ctx.rect(0, 0, 1000, 700);
+        ctx.fillStyle = "lightgray";
+        ctx.fill();
+
+        output1.innerHTML = slider1.value;
+        output2.innerHTML = slider2.value;
+
+      {% for position in projectile_positions %}
+        ctx.beginPath();
+        ctx.arc({{ position.0 }}, 700 - {{ position.1 }}, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = 'red';
+        ctx.fill();
+      {% endfor %}
+
+      slider1.oninput = function() {
+        output1.innerHTML = this.value;
+        }
+
+      slider2.oninput = function() {
+        output2.innerHTML = this.value;
+        }
+
+
+        // 게임을 캔버스에 렌더링합니다
+        game.render();
+
+        // AJAX를 사용하여 서버에 양식 데이터 제출
+        const form = document.querySelector('form');
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const formData = new FormData(form);
+            const xhr = new XMLHttpRequest();
+            xhr.open(form.method, form.action);
+            xhr.setRequestHeader('X-CSRFToken', '{{ csrf_token }}');
+            xhr.onload = () => {
+                const updatedGameState = JSON.parse(xhr.responseText);
+                game.updateState(updatedGameState);
+                game.render();
+            };
+            xhr.send(formData);
+        });
+
+    </script>
+  </body>
+</html>
